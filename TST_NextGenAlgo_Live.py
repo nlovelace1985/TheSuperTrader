@@ -87,8 +87,7 @@ def connect_with_retry(host, port, max_retries, clientId):
 
 ib, clientId = connect_with_retry('127.0.0.1', portNum, 10, clientId)
 
-textdiscord = "Connection established with ClientID"+str(clientId)
-send_discord_message(textdiscord)
+
 
 ## getting account balance 
 account_summary = ib.accountSummary()
@@ -99,6 +98,8 @@ for item in account_summary:
         break
     
 available_funds = float(available_funds)
+textdiscord = "Connection established with ClientID"+str(clientId)+" with $"+str(available_funds)
+send_discord_message(textdiscord)
 
 # estimate position size for this account 
 
