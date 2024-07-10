@@ -9,9 +9,6 @@ import requests
 import subprocess
 
 
-# GITHUB_REPO_URL = "https://raw.githubusercontent.com/bpraveenX/TST_1_SrcCode/main/tst_v6_local.py"
-# LOCAL_SCRIPT_PATH = "tst_v_n2.py"
-
 # Function to download the latest script
 def download_latest_script():
     try:
