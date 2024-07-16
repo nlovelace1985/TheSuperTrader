@@ -15,6 +15,8 @@ from datetime import timedelta
 import json, time
 nest_asyncio.apply()
 
+
+
 ## reading text file 
 cred_file = pd.read_csv('next_gen_v2_cred_text.txt', header=None)
 webhook_link = cred_file.iloc[0][0].split('=')[1].strip()
@@ -314,6 +316,14 @@ while datetime.datetime.now() < exitTime:
                     else:
                         send_discord_message("NAKED SHORT POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
                         cancel_bracket_orders_and_close_position()
+                        
+        elif len(posdf) == 0:
+            orders = ib.openOrders() 
+            ib.sleep(.5)
+            if len(orders) == 2: ## code found position is 0 but open orders
+                cancel_bracket_orders_and_close_position()
+                send_discord_message("Close Bracket Orders since no open position found!")
+            
 
     try: # running the whole code in try except loop to check for errors
         msg = retrieve_messages()
