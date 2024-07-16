@@ -1,12 +1,19 @@
-import requests
-import json
-import time
-import pandas as pd
-from datetime import datetime, timedelta
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jul  7 12:18:30 2024
+adding text at 12:43 EST
+@author: prave
+"""
+
 from ib_insync import *
 import nest_asyncio
-import math
+import datetime
+import pandas as pd
 from discord import SyncWebhook
+import requests
+from datetime import timedelta
+import json, time
+import math
 import pytz
 
 nest_asyncio.apply()
@@ -24,50 +31,24 @@ webhook = SyncWebhook.from_url(webhook_link)
 discordChannel = discordChLink
 authorizationCode = authCode
 
-# Function to retrieve messages with rate limiting and exponential backoff
+# Function to retrieve messages
 def retrieve_messages():
     headers = {
         'authorization': authorizationCode
     }
-    max_retries = 5
-    backoff_time = 1  # Initial backoff time in seconds
+    r = requests.get(discordChannel, headers=headers)
+    r.raise_for_status()
+    jobj = json.loads(r.text)
+    df = pd.DataFrame()
+    for i, value in enumerate(jobj):
+        if i > 1:
+            break
+        df = pd.concat([df, pd.DataFrame([value['content'], value['timestamp']]).transpose()])
+    return df
 
-    for attempt in range(max_retries):
-        r = requests.get(discordChannel, headers=headers)
-        if r.status_code == 429:
-            retry_after = int(r.headers.get('Retry-After', backoff_time))
-            print(f'Rate limit exceeded. Retrying after {retry_after} seconds.')
-            time.sleep(retry_after)
-            backoff_time *= 2  # Exponential backoff
-        else:
-            r.raise_for_status()
-            jobj = json.loads(r.text)
-            df = pd.DataFrame()
-            for i, value in enumerate(jobj):
-                if i > 1:
-                    break
-                df = pd.concat([df, pd.DataFrame([value['content'], value['timestamp']]).transpose()])
-            return df
-
-    raise Exception('Max retries exceeded for retrieving messages')
-
-# Function to send Discord message with rate limiting and exponential backoff
+# Function to send Discord message
 def send_discord_message(message):
-    max_retries = 5
-    backoff_time = 1  # Initial backoff time in seconds
-
-    for attempt in range(max_retries):
-        try:
-            webhook.send(message)
-            return
-        except requests.exceptions.RequestException as e:
-            if e.response.status_code == 429:
-                retry_after = int(e.response.headers.get('Retry-After', backoff_time))
-                print(f'Rate limit exceeded. Retrying after {retry_after} seconds.')
-                time.sleep(retry_after)
-                backoff_time *= 2  # Exponential backoff
-            else:
-                raise
+    webhook.send(message)
 
 # Connect to IB TWS or Gateway
 clientId = 1
@@ -132,13 +113,13 @@ crntexp = []
 for i in range(total_details):
     crntexp.append(details[i].contract.lastTradeDateOrContractMonth)
 
-dates_datetime = [datetime.strptime(date, '%Y%m%d') for date in crntexp]
+dates_datetime = [datetime.datetime.strptime(date, '%Y%m%d') for date in crntexp]
 latest_date = pd.to_datetime(dates_datetime).sort_values()[0].strftime('%Y%m%d')
 latest_exp_month = latest_date[:-2]
-specific_date = datetime.strptime(latest_date, '%Y%m%d')
+specific_date = datetime.datetime.strptime(latest_date, '%Y%m%d')
 
 # Get the current date
-current_date = datetime.now()
+current_date = datetime.datetime.now()
 difference = specific_date - current_date
 days_difference = difference.days
 
@@ -220,14 +201,14 @@ def cancel_bracket_orders_and_close_position():
 import pytz 
 newYorkTz = pytz.timezone("US/Eastern")
 UtcTz = pytz.timezone("UTC")
-timeInNewYork = datetime.now(newYorkTz)
+timeInNewYork = datetime.datetime.now(newYorkTz)
 
 #### Core logic below 
 # Initialize discord messages
 crntmsg = '1'
 prevmsg = '2'
 
-exitTime = datetime.now() + timedelta(minutes=29, seconds=50)
+exitTime = datetime.datetime.now() + timedelta(minutes=29, seconds=50)
 print('exitTime is ', exitTime)
 while crntmsg != prevmsg:
     try:
@@ -252,15 +233,15 @@ def round_nearest_qtr(number):
 
 breakcode = 0 
 checkPosition = 0  # this is to check if any orders exist without brackets 
-while datetime.now() < exitTime:
+while datetime.datetime.now() < exitTime:
     if breakcode == 1:
         break
-    timeInNewYork = datetime.now(newYorkTz)
+    timeInNewYork = datetime.datetime.now(newYorkTz)
     
-    if checkPosition == 1 and datetime.now().second > 15:
+    if checkPosition == 1 and datetime.datetime.now().second > 15:
         checkPosition = 0 
 
-    if datetime.now().minute % 2 == 0 and datetime.now().second < 5 and checkPosition == 0: 
+    if datetime.datetime.now().minute % 2 == 0 and datetime.datetime.now().second < 5 and checkPosition == 0: 
         ib.disconnect()
         time.sleep(1)
         ib, clientId = connect_with_retry('127.0.0.1', portNum, 100, clientId)
@@ -430,7 +411,7 @@ while datetime.now() < exitTime:
                     send_discord_message('Current position summary is :' + str(ib.positions()))
                 
             elif 'time left' in crntmsg:
-                timeleft = exitTime - datetime.now()
+                timeleft = exitTime - datetime.datetime.now()
                 cstr = "code will end in " + str(timeleft.seconds) + " seconds."
                 send_discord_message(cstr)
                 time.sleep(.1)
@@ -439,7 +420,7 @@ while datetime.now() < exitTime:
                 cancel_bracket_orders_and_close_position()
                 
             prevmsg = crntmsg
-        print('read @', datetime.now())
+        print('read @', datetime.datetime.now())
         time.sleep(.25)
         
     except Exception as e:
