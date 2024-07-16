@@ -1,0 +1,6 @@
+webhook = 
+discordChannel = 
+auth = 
+port = 
+qty = 
+contractName = ES
