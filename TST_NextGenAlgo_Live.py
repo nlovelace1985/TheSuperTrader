@@ -150,9 +150,9 @@ qty = None
 
 import math 
 if contractName == "MES":
-    qty = math.floor(available_funds/1500)
+    qty = math.floor(available_funds/1700)
 elif contractName == "ES":
-    qty = math.floor(available_funds/15000)
+    qty = math.floor(available_funds/17000)
 
 if qty == 0:
     send_discord_message('0 QTY, fix the issue!')
