@@ -98,21 +98,25 @@ def submit_bracket_order(ib, contract, action, quantity, limit_price, take_profi
     # Ensure main order gets its orderId
     ib.qualifyContracts(contract)
     main_order = bracket_orders[0]
-    ib.placeOrder(contract, main_order)
+    trade_main = ib.placeOrder(contract, main_order)
     while not main_order.orderId:
         ib.sleep(0.01)
     
     # Place child orders with correct parentId
+    child_trades = []
     for order in bracket_orders[1:]:
         order.parentId = main_order.orderId
-        ib.placeOrder(contract, order)
+        child_trade = ib.placeOrder(contract, order)
+        child_trades.append(child_trade)
+    
+    return [trade_main] + child_trades
 
 # Monitor open orders
 def monitor_open_orders(ib):
     open_orders = ib.openOrders()
     print(f"Number of Open Orders: {len(open_orders)}")
-    for order in open_orders:
-        print(f"Order: {order.action} - {order.orderType} - Limit/Stop: {order.lmtPrice}/{order.auxPrice} - Status: {order.status}")
+    for trade in ib.trades():
+        print(f"Order: {trade.order.action} - {trade.order.orderType} - Limit/Stop: {trade.order.lmtPrice}/{trade.order.auxPrice} - Status: {trade.orderStatus.status}")
 
 # Cancel bracket orders and close positions
 def cancel_bracket_orders_and_close_position(ib):
@@ -140,7 +144,7 @@ print(f"Contract defined: {contract}")
 
 # Example of submitting a bracket order
 try:
-    submit_bracket_order(
+    trades = submit_bracket_order(
         ib=ib,
         contract=contract,
         action='BUY',
@@ -150,6 +154,8 @@ try:
         stop_loss_price=140.00
     )
     print("Bracket order submitted successfully.")
+    for trade in trades:
+        print(f"Order {trade.order.orderId} - Status: {trade.orderStatus.status}")
 except Exception as e:
     print(f"Error submitting bracket order: {e}")
 
