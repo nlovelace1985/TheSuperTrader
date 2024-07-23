@@ -15,21 +15,13 @@ import json, time
 
 nest_asyncio.apply()
 
-# Debug print
-print("Starting script...")
-
 # Read credentials from file
-try:
-    cred_file = pd.read_csv('next_gen_v2_cred_text.txt', header=None)
-    webhook_link = cred_file.iloc[0][0].split('=')[1].strip()
-    discordChLink = cred_file.iloc[1][0].split('=')[1].strip()
-    authCode = cred_file.iloc[2][0].split('=')[1].strip()
-    portNum = int(cred_file.iloc[3][0].split('=')[1].strip())
-    contractName = cred_file.iloc[5][0].split('=')[1].strip()
-    print("Credentials loaded successfully.")
-except Exception as e:
-    print(f"Error loading credentials: {e}")
-    exit(1)
+cred_file = pd.read_csv('next_gen_v2_cred_text.txt', header=None)
+webhook_link = cred_file.iloc[0][0].split('=')[1].strip()
+discordChLink = cred_file.iloc[1][0].split('=')[1].strip()
+authCode = cred_file.iloc[2][0].split('=')[1].strip()
+portNum = int(cred_file.iloc[3][0].split('=')[1].strip())
+contractName = cred_file.iloc[5][0].split('=')[1].strip()
 
 # Discord webhook setup
 webhook = SyncWebhook.from_url(webhook_link)
@@ -103,13 +95,9 @@ def submit_bracket_order(ib, contract, action, quantity, limit_price, take_profi
         ib.sleep(0.01)
     
     # Place child orders with correct parentId
-    child_trades = []
     for order in bracket_orders[1:]:
         order.parentId = main_order.orderId
-        child_trade = ib.placeOrder(contract, order)
-        child_trades.append(child_trade)
-    
-    return [trade_main] + child_trades
+        ib.placeOrder(contract, order)
 
 # Monitor open orders
 def monitor_open_orders(ib):
@@ -136,43 +124,26 @@ def cancel_bracket_orders_and_close_position(ib):
 # Main logic
 clientId = 1
 ib, clientId = connect_with_retry('127.0.0.1', portNum, 100, clientId)
-print("Connected to IB.")
 
 # Define the contract (example: AAPL stock)
 contract = Stock(contractName, 'SMART', 'USD')
-print(f"Contract defined: {contract}")
 
 # Example of submitting a bracket order
-try:
-    trades = submit_bracket_order(
-        ib=ib,
-        contract=contract,
-        action='BUY',
-        quantity=100,
-        limit_price=145.00,
-        take_profit_price=150.00,
-        stop_loss_price=140.00
-    )
-    print("Bracket order submitted successfully.")
-    for trade in trades:
-        print(f"Order {trade.order.orderId} - Status: {trade.orderStatus.status}")
-except Exception as e:
-    print(f"Error submitting bracket order: {e}")
+submit_bracket_order(
+    ib=ib,
+    contract=contract,
+    action='BUY',
+    quantity=100,
+    limit_price=145.00,
+    take_profit_price=150.00,
+    stop_loss_price=140.00
+)
 
 # Monitor open orders
-try:
-    monitor_open_orders(ib)
-except Exception as e:
-    print(f"Error monitoring open orders: {e}")
+monitor_open_orders(ib)
 
 # Example of cancelling orders and closing positions
-# Uncomment when needed
-# try:
-#     cancel_bracket_orders_and_close_position(ib)
-#     print("Orders cancelled and positions closed.")
-# except Exception as e:
-#     print(f"Error cancelling orders and closing positions: {e}")
+# cancel_bracket_orders_and_close_position(ib)
 
 # Disconnect from IB
 ib.disconnect()
-print("Disconnected from IB.")
