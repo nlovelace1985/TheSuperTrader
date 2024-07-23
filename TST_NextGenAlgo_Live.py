@@ -192,10 +192,50 @@ def bktOrderFunc(side,qty,limit_price,take_profit_price,stop_loss_price):
 
 
 # Function to cancel all bracket orders and close position
+
+# Improved function to cancel all bracket orders and close position
 def cancel_bracket_orders_and_close_position():
-    # Iterate over open orders
-    for order in ib.openOrders():
-        # print('order:',order)
+    print("Starting the process to cancel bracket orders and close position...")
+
+    open_orders = ib.openOrders()
+    bracket_order_ids = set()
+
+    # Identify bracket orders by checking for orders with the same parentId
+    for order in open_orders:
+        if order.orderType in ['LMT', 'STP'] and order.parentId != 0:
+            bracket_order_ids.add(order.parentId)
+    
+    if not bracket_order_ids:
+        print("No bracket orders found to cancel.")
+        return
+    
+    print(f"Identified bracket order IDs: {bracket_order_ids}")
+
+    for parentId in bracket_order_ids:
+        for order in open_orders:
+            if order.parentId == parentId:
+                print(f"Cancelling order ID: {order.orderId} of type {order.orderType}")
+                ib.cancelOrder(order)
+    
+    time.sleep(2)
+
+    for parentId in bracket_order_ids:
+        for order in ib.openOrders():
+            if order.parentId == parentId:
+                print(f"Order ID: {order.orderId} of type {order.orderType} still open after cancellation attempt.")
+                return
+    
+    positions = ib.positions()
+    for position in positions:
+        if position.contract.symbol == contract.symbol:
+            action = 'SELL' if position.position > 0 else 'BUY'
+            qty = abs(position.position)
+            market_order = MarketOrder(action, qty)
+            print(f"Placing market order to close position: {action} {qty} {contract.symbol}")
+            ib.placeOrder(contract, market_order)
+    
+    print("Bracket orders cancelled and position closed successfully.")
+  # print('order:',order)
         # if order.parentId:  # Check if the order has a parent ID (indicating it's part of a bracket order)
             # Cancel the order
         ib.cancelOrder(order)
