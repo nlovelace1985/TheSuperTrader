@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jul  7 12:18:30 2024
-adding text at 11:58 EST
+adding text at 4:16 EST
 @author: nlove
 """
 
@@ -302,9 +302,9 @@ while datetime.datetime.now() < exitTime:
                     if len(openorderdf) > 0:
                         a = 1
                     else:
-                        # send_discord_message("NAKED LONG POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
-                        # cancel_bracket_orders_and_close_position()
-                        pass  # Placeholder to maintain indentation
+                        send_discord_message("NAKED LONG POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
+                        cancel_bracket_orders_and_close_position()
+                elif pos[2] < 0: # in short position
                     openorderdf = ib.openOrders()
                     
                     time.sleep(1)
@@ -316,11 +316,12 @@ while datetime.datetime.now() < exitTime:
                     else:
                         send_discord_message("NAKED SHORT POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
                         cancel_bracket_orders_and_close_position()
-                        # send_discord_message("NAKED SHORT POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
-                        # cancel_bracket_orders_and_close_position()
-                        pass  # Placeholder to maintain indentation
+                        
+        elif len(posdf) == 0:
+            orders = ib.openOrders() 
             ib.sleep(.5)
-            if len(orders) == 2: ## code found position is 0 but open orders
+                # cancel_bracket_orders_and_close_position()
+                pass  # Placeholder to maintain indentation
                 cancel_bracket_orders_and_close_position()
                 send_discord_message("Close Bracket Orders since no open position found!")
             
