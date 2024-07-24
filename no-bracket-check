@@ -302,8 +302,8 @@ while datetime.datetime.now() < exitTime:
                     if len(openorderdf) > 0:
                         a = 1
                     else:
-                        send_discord_message("NAKED LONG POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
-                        cancel_bracket_orders_and_close_position()
+#                         send_discord_message("NAKED LONG POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
+#                         cancel_bracket_orders_and_close_position()
                 elif pos[2] < 0: # in short position
                     openorderdf = ib.openOrders()
                     
