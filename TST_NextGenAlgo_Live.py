@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jul  7 12:18:30 2024
-removed bracket check/close 4:38pm EST 07/24/2024
+removed bracket check/close 4:46pm EST 07/24/2024
 @author: nlove
 """
 
@@ -50,7 +50,6 @@ def retrieve_messages():
 
 def send_discord_message(message):
     webhook.send(message)
-    
 
 # Connect to IB TWS or Gateway
 # util.startLoop()
@@ -72,75 +71,344 @@ def connect_with_retry(host, port, max_retries, clientId):
             available_funds = None
             TotalCashValue = None
             for item in account_summary:
-                if item.tag == 'AvailableFunds':
-                    available_funds = float(item.value)
-                elif item.tag == 'TotalCashValue':
-                    TotalCashValue = float(item.value)
-            print(f'Connected with clientId = {clientId}')
-            return ib, clientId
+                if item.tag == 'ExcessLiquidity':
+                    available_funds = item.value
+                    
+                if item.tag == 'TotalCashValue':
+                    TotalCashValue  = item.value 
+                    
+            print(f'Successfully connected with clientId = {clientId}, available funds = {available_funds}, total cash value = {TotalCashValue}')
         except Exception as e:
-            print(f'Failed to connect with clientId = {clientId}: {e}')
+            print(type(e))
+            e1 = e
+            print(f'Connection failed with clientId = {clientId}. Retrying...')
+            if "name 'host' is not defined" in str(e1):
+                send_discord_message('Login to the IB Account.')
+                break
             clientId += 1
-            time.sleep(1)
-            
-    raise Exception('Failed to connect after max retries')
+            time.sleep(1)  # Sleep for a short while before retrying
 
-ib, clientId = connect_with_retry('127.0.0.1', portNum, 100, clientId)
+    if not connected:
+        raise ConnectionError(f'Unable to connect to IB TWS/Gateway after {max_retries} attempts.')
 
+    return ib, clientId
+
+ib, clientId = connect_with_retry('127.0.0.1', portNum, 10, clientId)
+
+# getting account balance 
+account_summary = ib.accountSummary()
+available_funds = None
+for item in account_summary:
+    if item.tag == 'ExcessLiquidity':
+        available_funds = item.value
+        break
+
+available_funds = float(available_funds)
+textdiscord = "Connection established with ClientID" + str(clientId) + " with $" + str(available_funds)
+send_discord_message(textdiscord)
+# estimate position size for this account 
+
+# getting 
+cnt = Future(symbol='ES', lastTradeDateOrContractMonth="", exchange="CME")
+details = ib.reqContractDetails(cnt)
+total_details = len(details)
+crntexp = []
+for i in range(total_details):
+    crntexp.append(details[i].contract.lastTradeDateOrContractMonth)
+
+dates_datetime = [datetime.datetime.strptime(date, '%Y%m%d') for date in crntexp]
+latest_date_2 = pd.to_datetime(dates_datetime).sort_values()[0].strftime('%Y-%m-%d')
+latest_date = pd.to_datetime(dates_datetime).sort_values()[0].strftime('%Y%m%d')
+latest_exp_month = latest_date[:-2]
+    
+specific_date = datetime.datetime.strptime(latest_date, '%Y%m%d')
+
+# Get the current date
+current_date = datetime.datetime.now()
+difference = specific_date - current_date
+days_difference = difference.days
+
+if days_difference < 7:     
+    nextexp = specific_date + timedelta(days=90)
+    latest_exp_month = nextexp.strftime('%Y%m')
+
+# Define contract details for ES (E-mini S&P 500)
+contract = Future(symbol=contractName, lastTradeDateOrContractMonth=latest_exp_month, exchange="CME")
+ 
+# position sizing
+qty = None 
+
+import math 
+if contractName == "MES":
+    qty = math.floor(available_funds / 1500)
+elif contractName == "ES":
+    qty = math.floor(available_funds / 15000)
+
+if qty == 0:
+    send_discord_message('0 QTY, fix the issue!')
+else:
+    send_discord_message('Qty detected by logic: ' + str(qty))
+
+def bktOrderFunc(side, qty, limit_price, take_profit_price, stop_loss_price):
+    
+    limit_price = limit_price
+    take_profit_price = take_profit_price  # take profit price
+    stop_loss_price = stop_loss_price  # stop loss price
+
+    # Create bracket order
+    take_profit_order = LimitOrder('SELL' if side == 'BUY' else "BUY", qty, take_profit_price, tif='GTC')
+    stop_loss_order = StopOrder('SELL' if side == 'BUY' else "BUY", qty, stop_loss_price, tif='GTC')
+
+    # Create a list to hold all bracket orders
+    bracket_order = ib.bracketOrder(
+            action='BUY' if side == 'BUY' else "SELL",
+            quantity=qty,
+            limitPrice=limit_price, 
+            takeProfitPrice=take_profit_price,
+            stopLossPrice=stop_loss_price)
+
+    for o in bracket_order:
+        o.outsideRth = True
+        o.tif = "GTC"
+        
+    # Iterate over each order in the bracket and place it
+    for o in bracket_order:
+         ib.placeOrder(contract, o)
+
+# Function to cancel all bracket orders and close position
 def cancel_bracket_orders_and_close_position():
     # for order in ib.openOrders():
-    #     if order.orderType == 'BRACKET':
-    #         ib.cancelOrder(order)
-    
-    # for position in ib.positions():
-    #     ib.closePosition(position.contract)
-    pass
-
-def main():
+    #     ib.cancelOrder(order)
+    # Check open positions
+    positions = ib.positions()
+    print('got positions when contractname is', contractName)
     try:
-        while True:
-            messages = retrieve_messages()
-            for index, row in messages.iterrows():
-                crntmsg = row[0].lower()
-                if 'bracket' in crntmsg:
-                    # Check for bracket orders
-                    # Uncomment the following line once the issue is fixed
-                    # cancel_bracket_orders_and_close_position()
-                    send_discord_message('Bracket order detected. Checking logic to ensure positions are not closed errently.')
-                elif 'exit long' in crntmsg:
-                    # Close any open positions if 'Exit Long' is detected
-                    # cancel_bracket_orders_and_close_position()
-                    send_discord_message('Long Exit, Code going to sleep for 10 seconds')
-                    ib.disconnect()
-                    time.sleep(10)
-                    send_discord_message('Code alive again, running sanity checks.')
-                    ib, clientId = connect_with_retry('127.0.0.1', portNum, 100, clientId)
-                    
-                    posdf = ib.positions() 
-                    time.sleep(2)
-                    if len(posdf) > 0:
-                        send_discord_message('Current position summary is :'+str(ib.positions()[2]))
+        for position in positions:
+            print(position)
+            if position.contract.symbol == contractName:
+                # Close the position
+                if position.position > 0:  # currently long contract is open 
+                    order = MarketOrder('SELL', position.position)
+                    ib.placeOrder(contract, order)
+                elif position.position < 0:  # currently in short 
+                    order = MarketOrder('BUY', abs(position.position))
+                    ib.placeOrder(contract, order)
+    except Exception as e:
+        print(e)
+                
+    # Check open positions
+    ib.sleep(1)
+    positions = ib.positions()
+    print('secondary positions pull.')
+    print(positions)
+
+# Trigger the function to cancel bracket orders and close positions
+# cancel_bracket_orders_and_close_position()
+
+import pytz 
+newYorkTz = pytz.timezone("US/Eastern")
+UtcTz = pytz.timezone("UTC")
+timeInNewYork = datetime.datetime.now(newYorkTz)
+# core logic below 
+# initialize discord messages
+
+crntmsg = '1'
+prevmsg = '2'
+
+exitTime = datetime.datetime.now() + timedelta(minutes=29, seconds=50)
+print('exitTime is', exitTime)
+while crntmsg != prevmsg:
+    try:
+        crnthour = timeInNewYork.hour
+        prevhour = crnthour
+        crntmin = timeInNewYork.minute
+        prevmin = crntmin
+        msg = retrieve_messages()
+        crntmsg = msg.iloc[0][0]
+        prevmsg = crntmsg
+        print(crntmsg)
+    except:
+        time.sleep(.5)
+        
+headers = {
+    'authorization': authorizationCode
+}
+
+def round_nearest_qtr(number):
+    base = 0.25
+    return round(base * round(number / base), 2)
+
+breakcode = 0 
+checkPosition = 0  # this is to check if any orders exist without brackets 
+while datetime.datetime.now() < exitTime:
+    if breakcode == 1:
+        break
+    timeInNewYork = datetime.datetime.now(newYorkTz)
+    
+    if checkPosition == 1 and datetime.datetime.now().second > 15:
+        checkPosition = 0 
+        
+    if datetime.datetime.now().minute % 2 == 0 and datetime.datetime.now().second < 5 and checkPosition == 0: 
+        ib.disconnect()
+        time.sleep(1)
+        ib, clientId = connect_with_retry('127.0.0.1', portNum, 100, clientId)
+        checkPosition = 1
+        posdf = ib.positions() 
+        time.sleep(1.2)
+        print('check position logic.')
+        print(posdf)
+        if len(posdf) > 0:
+            for pos in posdf:
+                if pos[2] > 0:  # in long position 
+                    openorderdf = ib.openOrders()
+                    time.sleep(1)
+                    print('in long')
+                    print(openorderdf)
+                    if len(openorderdf) > 0:
+                        a = 1
                     else:
-                        send_discord_message('Current position summary is :'+str(ib.positions()))
-                    
-                elif 'time left' in crntmsg:
-                    timeleft = exitTime - datetime.datetime.now()
-                    cstr = "code will end in "+str(timeleft.seconds)+ " seconds."
-                    send_discord_message(cstr)
-                    time.sleep(.1)
-                    
-                elif 'close all' in crntmsg:
-                    # cancel_bracket_orders_and_close_position()
-                    pass
-                prevmsg = crntmsg
-            print('read @',datetime.datetime.now())
-            time.sleep(.25)
+                        pass  # Placeholder to maintain indentation
+                        # send_discord_message("NAKED LONG POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
+                        # cancel_bracket_orders_and_close_position()
+                    openorderdf = ib.openOrders()
+                    time.sleep(1)
+                    print('in short')
+                    print(openorderdf)
+                    if len(openorderdf) > 0:
+                        a = 1
+                    else:
+                        send_discord_message("NAKED SHORT POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
+                        pass  # Placeholder to maintain indentation
+                        # send_discord_message("NAKED SHORT POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
+                        # cancel_bracket_orders_and_close_position()
+            orders = ib.openOrders() 
+            ib.sleep(.5)
+            if len(orders) == 2:  # code found position is 0 but open orders
+                # cancel_bracket_orders_and_close_position()
+                send_discord_message("Close Bracket Orders since no open position found!")
+
+    try:  # running the whole code in try except loop to check for errors
+        msg = retrieve_messages()
+        crntmsg = msg.iloc[0][0]
+        crntmtime = msg.iloc[0][1]
+        
+        incMsg = 0 
+        if crntmsg != prevmsg: 
+            incMsg += 1 
+            print('crntmsg is', crntmsg)
+            print(incMsg)
+            if 'Enter Long' in crntmsg or 'Close entry(s) order Short' in crntmsg:
+                # cancel_bracket_orders_and_close_position()
+                time.sleep(.5)
+                # enter long trade - bracket order
+                x22 = crntmsg.split("@")
+                limit_price = round_nearest_qtr(float(x22[1].split(' ')[0]))
+                stop_loss_price = round_nearest_qtr(float(x22[-1]))
+                side = "BUY"
+                if stop_loss_price > limit_price:
+                    send_discord_message("Stop loss price is adjusted")
+                    stop_loss_price = limit_price - 5 
+                take_profit_price = limit_price + 100
+                bktOrderFunc(side, qty, limit_price, take_profit_price, stop_loss_price)
+                send_discord_message('Code going to sleep for 20 seconds')
+                time.sleep(20)
+                ib.disconnect()
+                time.sleep(1)
+                send_discord_message('code alive again, running sanity checks.')
+                ib, clientId = connect_with_retry('127.0.0.1', portNum, 100, clientId)
+                send_discord_message('Long order placed')
+                posdf = ib.positions() 
+                print(len(posdf))
+                print(posdf)
+                time.sleep(2)
+                if len(posdf) > 0:
+                    txt = 'Current position summary:\n' 
+                    txt = txt + "Number of Positions: " + str(len(posdf)) + "\n"
+                    for pos in posdf:
+                        txt = txt + str(int(pos[2])) + " of " + pos[1].symbol 
+                    lenoo = len(ib.openOrders())  # open orders
+                    txt = txt + " \n" + "Open Order Summary:\nNumber of Open Orders: " + str(lenoo) + "\n"
+                    for oo in ib.openOrders():
+                        oTxt = oo.action + " - " + oo.orderType + " - lmt/stp:" + str(oo.lmtPrice) + "/" + str(oo.auxPrice) + ", orderType:" + oo.tif + "\n"
+                        txt = txt + oTxt
+                    send_discord_message(txt)
+                else:
+                    send_discord_message('Current position summary is :'+str(ib.positions()))
+            elif 'Exit Long' in crntmsg:
+                # cancel_bracket_orders_and_close_position()
+                send_discord_message('Long Exit, Code going to sleep for 10 seconds')
+                ib.disconnect()
+                time.sleep(10)
+                send_discord_message('code alive again, running sanity checks.')
+                ib, clientId = connect_with_retry('127.0.0.1', portNum, 100, clientId)
+                posdf = ib.positions() 
+                time.sleep(2)
+                if len(posdf) > 0:
+                    send_discord_message('Current position summary is :'+str(ib.positions()[2]))
+                else:
+                    send_discord_message('Current position summary is :'+str(ib.positions()))
+            elif 'Enter Short' in crntmsg or 'Close entry(s) order Long' in crntmsg:
+                # cancel_bracket_orders_and_close_position()
+                time.sleep(.5)
+                x22 = crntmsg.split("@")
+                limit_price = round_nearest_qtr(float(x22[1].split(' ')[0]))
+                stop_loss_price = round_nearest_qtr(float(x22[-1]))
+                if stop_loss_price < limit_price:
+                    send_discord_message("SL adjusted")
+                    stop_loss_price = limit_price + 5
+                side = "SELL"
+                take_profit_price = limit_price - 100
+                bktOrderFunc(side, qty, limit_price, take_profit_price, stop_loss_price)
+                send_discord_message('Code going to sleep for 20 seconds')
+                time.sleep(20)
+                ib.disconnect()
+                time.sleep(1)
+                ib, clientId = connect_with_retry('127.0.0.1', portNum, 100, clientId)
+                send_discord_message('Short order placed')
+                posdf = ib.positions() 
+                print(len(posdf))
+                print(posdf)
+                time.sleep(2)
+                if len(posdf) > 0:
+                    txt = 'Current position summary:\n' 
+                    txt = txt + "Number of Positions: " + str(len(posdf)) + "\n"
+                    for pos in posdf:
+                        txt = txt + str(int(pos[2])) + " of " + pos[1].symbol 
+                    lenoo = len(ib.openOrders())  # open orders
+                    txt = txt + " \n" + "Open Order Summary:\nNumber of Open Orders: " + str(lenoo) + "\n"
+                    for oo in ib.openOrders():
+                        oTxt = oo.action + " - " + oo.orderType + " - lmt/stp:" + str(oo.lmtPrice) + "/" + str(oo.auxPrice) + ", orderType:" + oo.tif + "\n"
+                        txt = txt + oTxt
+                    send_discord_message(txt)
+                else:
+                    send_discord_message('Current position summary is :'+str(ib.positions()))
+            elif 'Exit Short' in crntmsg:
+                # cancel_bracket_orders_and_close_position()
+                send_discord_message('Short Exit, Code going to sleep for 10 seconds')
+                ib.disconnect()
+                time.sleep(10)
+                send_discord_message('code alive again, running sanity checks.')
+                ib, clientId = connect_with_retry('127.0.0.1', portNum, 100, clientId)
+                posdf = ib.positions() 
+                time.sleep(2)
+                if len(posdf) > 0:
+                    send_discord_message('Current position summary is :'+str(ib.positions()[2]))
+                else:
+                    send_discord_message('Current position summary is :'+str(ib.positions()))
+            elif 'time left' in crntmsg:
+                timeleft = exitTime - datetime.datetime.now()
+                cstr = "code will end in "+str(timeleft.seconds)+ " seconds."
+                send_discord_message(cstr)
+                time.sleep(.1)
+            elif 'close all' in crntmsg:
+                # cancel_bracket_orders_and_close_position()
+                pass
+            prevmsg = crntmsg
+        print('read @',datetime.datetime.now())
+        time.sleep(.25)
     except Exception as e:
         df3 = pd.DataFrame([e])
 
 #### end of core logic
 # Disconnect from IB TWS or Gateway
 ib.disconnect()
-
-if __name__ == "__main__":
-    main()
