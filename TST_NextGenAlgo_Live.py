@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jul  7 12:18:30 2024
-adding text at 4:16 EST
+adding text at 11:58 EST
 @author: nlove
 """
 
@@ -320,13 +320,14 @@ while datetime.datetime.now() < exitTime:
         elif len(posdf) == 0:
             orders = ib.openOrders() 
             ib.sleep(.5)
+            orders = ib.openOrders()
                 # cancel_bracket_orders_and_close_position()
                 pass  # Placeholder to maintain indentation
                 cancel_bracket_orders_and_close_position()
-                send_discord_message("Close Bracket Orders since no open position found!")
-            
-
-    try: # running the whole code in try except loop to check for errors
+            # cancel_bracket_orders_and_close_position()
+            pass  # Placeholder to maintain indentation
+            cancel_bracket_orders_and_close_position()
+            send_discord_message("Close Bracket Orders since no open position found!")
         msg = retrieve_messages()
         crntmsg = msg.iloc[0][0]
         crntmtime = msg.iloc[0][1]
