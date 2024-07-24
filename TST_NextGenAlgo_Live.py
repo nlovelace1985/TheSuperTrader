@@ -302,8 +302,9 @@ while datetime.datetime.now() < exitTime:
                     if len(openorderdf) > 0:
                         a = 1
                     else:
-                        send_discord_message("NAKED LONG POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
-                        cancel_bracket_orders_and_close_position()
+    # send_discord_message("NAKED LONG POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
+    # cancel_bracket_orders_and_close_position()
+    pass  # Placeholder to maintain indentation
                 elif pos[2] < 0: # in short position
                     openorderdf = ib.openOrders()
                     
@@ -314,20 +315,22 @@ while datetime.datetime.now() < exitTime:
                     if len(openorderdf) > 0:
                         a = 1
                     else:
-                        send_discord_message("NAKED SHORT POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
-                        cancel_bracket_orders_and_close_position()
+    # send_discord_message("NAKED SHORT POSITION!!! PLEASE CHECK and RESOLVE NOW!!!!")
+    # cancel_bracket_orders_and_close_position()
+    pass  # Placeholder to maintain indentation
                         
         elif len(posdf) == 0:
             orders = ib.openOrders() 
+    orders = ib.openOrders()
             ib.sleep(.5)
-            orders = ib.openOrders()
-                # cancel_bracket_orders_and_close_position()
+    # # cancel_bracket_orders_and_close_position()
+    pass  # Placeholder to maintain indentation
                 pass  # Placeholder to maintain indentation
                 cancel_bracket_orders_and_close_position()
-            # cancel_bracket_orders_and_close_position()
-            pass  # Placeholder to maintain indentation
-            cancel_bracket_orders_and_close_position()
-            send_discord_message("Close Bracket Orders since no open position found!")
+                send_discord_message("Close Bracket Orders since no open position found!")
+            
+
+    try: # running the whole code in try except loop to check for errors
         msg = retrieve_messages()
         crntmsg = msg.iloc[0][0]
         crntmtime = msg.iloc[0][1]
