@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jul  7 12:18:30 2024
-removed bracket check/close 4:30pm EST 07/24/2024
+removed bracket check/close 4:38pm EST 07/24/2024
 @author: nlove
 """
 
@@ -97,47 +97,50 @@ def cancel_bracket_orders_and_close_position():
     pass
 
 def main():
-    while True:
-        messages = retrieve_messages()
-        for index, row in messages.iterrows():
-            crntmsg = row[0].lower()
-            if 'bracket' in crntmsg:
-                # Check for bracket orders
-                # Uncomment the following line once the issue is fixed
-                # cancel_bracket_orders_and_close_position()
-                send_discord_message('Bracket order detected. Checking logic to ensure positions are not closed errently.')
-            elif 'exit long' in crntmsg:
-                # Close any open positions if 'Exit Long' is detected
-                # cancel_bracket_orders_and_close_position()
-                send_discord_message('Long Exit, Code going to sleep for 10 seconds')
-                ib.disconnect()
-                time.sleep(10)
-                send_discord_message('Code alive again, running sanity checks.')
-                ib, clientId = connect_with_retry('127.0.0.1', portNum, 100, clientId)
-                
-                posdf = ib.positions() 
-                time.sleep(2)
-                if len(posdf)>0:
-                    send_discord_message('Current position summary is :'+str(ib.positions()[2]))
-                else:
-                    send_discord_message('Current position summary is :'+str(ib.positions()))
-                
-            elif 'time left' in crntmsg:
-                timeleft = exitTime - datetime.datetime.now()
-                cstr = "code will end in "+str(timeleft.seconds)+ " seconds."
-                send_discord_message(cstr)
-                time.sleep(.1)
-                
-            elif 'close all' in crntmsg:
-                # cancel_bracket_orders_and_close_position()
-                pass
-            prevmsg = crntmsg
-        print('read @',datetime.datetime.now())
-        time.sleep(.25)
-        
+    try:
+        while True:
+            messages = retrieve_messages()
+            for index, row in messages.iterrows():
+                crntmsg = row[0].lower()
+                if 'bracket' in crntmsg:
+                    # Check for bracket orders
+                    # Uncomment the following line once the issue is fixed
+                    # cancel_bracket_orders_and_close_position()
+                    send_discord_message('Bracket order detected. Checking logic to ensure positions are not closed errently.')
+                elif 'exit long' in crntmsg:
+                    # Close any open positions if 'Exit Long' is detected
+                    # cancel_bracket_orders_and_close_position()
+                    send_discord_message('Long Exit, Code going to sleep for 10 seconds')
+                    ib.disconnect()
+                    time.sleep(10)
+                    send_discord_message('Code alive again, running sanity checks.')
+                    ib, clientId = connect_with_retry('127.0.0.1', portNum, 100, clientId)
+                    
+                    posdf = ib.positions() 
+                    time.sleep(2)
+                    if len(posdf) > 0:
+                        send_discord_message('Current position summary is :'+str(ib.positions()[2]))
+                    else:
+                        send_discord_message('Current position summary is :'+str(ib.positions()))
+                    
+                elif 'time left' in crntmsg:
+                    timeleft = exitTime - datetime.datetime.now()
+                    cstr = "code will end in "+str(timeleft.seconds)+ " seconds."
+                    send_discord_message(cstr)
+                    time.sleep(.1)
+                    
+                elif 'close all' in crntmsg:
+                    # cancel_bracket_orders_and_close_position()
+                    pass
+                prevmsg = crntmsg
+            print('read @',datetime.datetime.now())
+            time.sleep(.25)
     except Exception as e:
         df3 = pd.DataFrame([e])
 
 #### end of core logic
 # Disconnect from IB TWS or Gateway
 ib.disconnect()
+
+if __name__ == "__main__":
+    main()
