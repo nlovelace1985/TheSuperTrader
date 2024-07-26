@@ -289,14 +289,16 @@ while datetime.datetime.now() < exitTime:
         
         checkPosition = 1
         pos_df = pd.DataFrame(ib.reqPositions())
-        positions = pos_df[pos_df['position'] != 0]
-        posdf = positions
+        posdf = pos_df
         
-        
-        time.sleep(1.2)
-        print('check position logic.')
-        print(posdf)
         if len(posdf) > 0:
+            positions = pos_df[pos_df['position'] != 0]
+            posdf = positions
+            
+            
+            time.sleep(1.2)
+            print('check position logic.')
+            print(posdf)
             for pos in range(0,len(posdf)):
                 if posdf['position'].iloc[pos] > 0: # in long position 
                     openorderdf = ib.reqAllOpenOrders()
