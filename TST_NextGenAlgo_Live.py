@@ -224,12 +224,7 @@ def cancel_bracket_orders_and_close_position():
     except Exception as e:
         print(e)
                 
-    # Check open positions
-    ib.sleep(1)
-    positions = pd.DataFrame(ib.reqPositions())
-    positions = positions[positions['position']!=0]
-    print('secondary positions pull.')
-    print(positions)
+    
             
         
 
