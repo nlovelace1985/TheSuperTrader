@@ -149,9 +149,9 @@ qty = None
 
 import math 
 if contractName == "MES":
-    qty = math.floor(available_funds/1800)
+    qty = math.floor(available_funds/2000)
 elif contractName == "ES":
-    qty = math.floor(available_funds/18000)
+    qty = math.floor(available_funds/20000)
     
 if qty > 200:
     qty = 3
