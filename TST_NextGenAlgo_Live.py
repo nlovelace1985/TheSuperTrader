@@ -203,12 +203,13 @@ def cancel_bracket_orders_and_close_position():
     
     ib.reqGlobalCancel()
     
-    # Check open positions
-    pos_df = pd.DataFrame(ib.reqPositions())
-    positions = pos_df[pos_df['position'] != 0]
+    
     # positions = ib.positions()
     print('got positions when contractname is ',contractName)
     try:
+        # Check open positions
+        pos_df = pd.DataFrame(ib.reqPositions())
+        positions = pos_df[pos_df['position'] != 0]
         for pos in range(0,len(positions)):
             position = positions.iloc[pos]
             print(position)
