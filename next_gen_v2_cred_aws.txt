@@ -1,0 +1,7 @@
+custId = 110057
+messageLink = 
+auth = 1002-tempuser	
+port = 7497
+qty = 1
+contractName = MES
+postLink = 
