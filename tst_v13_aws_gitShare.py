@@ -18,18 +18,19 @@ nest_asyncio.apply()
 
 
 ## reading text file 
-cred_file = pd.read_csv('next_gen_v2_cred_text.txt', header=None)
-webhook_link = cred_file.iloc[0][0].split('=')[1].strip()
-discordChLink = cred_file.iloc[1][0].split('=')[1].strip()
+cred_file = pd.read_csv('next_gen_v2_cred_aws.txt', header=None)
+custId = cred_file.iloc[0][0].split('=')[1].strip()
+api_url = cred_file.iloc[1][0].split('=')[1].strip()
 authCode = cred_file.iloc[2][0].split('=')[1].strip()
 portNum = cred_file.iloc[3][0].split('=')[1].strip()
 # qty = cred_file.iloc[4][0].split('=')[1].strip()
 contractName = cred_file.iloc[5][0].split('=')[1].strip()
-custId = "TEST1"
+post_url = cred_file.iloc[6][0].split('=')[1].strip()
+# custId = "TEST1"
 
 
 # TTB channel
-token = ''
+token = authCode
 
 headers2 = {
     'Authorization': token
@@ -41,8 +42,8 @@ def extract_datetime(text):
     matches = re.findall(pattern, text)
     return matches
 
-def retrieve_messages(token):
-    API_URL = 'messages'
+def retrieve_messages(token,api_url):
+    API_URL = api_url
 
     # Headers including the authorization token
     token = token
@@ -123,11 +124,11 @@ ib, clientId, TotalCashValue = connect_with_retry('127.0.0.1', portNum, 10, clie
 
 keyname = custId# + "@" + timenow 
 
-def postClientSummTable(json_data):
+def postClientSummTable(json_data,post_url):
     headers_json = {
         "Content-Type" : "application/json"}
     
-    api_url_client = "client"
+    api_url_client = post_url
     response = requests.post(api_url_client, data = json_data, headers = headers_json)
     while response.status_code != 200:
         print(response.status_code)
@@ -172,7 +173,7 @@ data = {
         }
 json_data = json.dumps(data)
 
-postClientSummTable(json_data)
+postClientSummTable(json_data,post_url)
 
 
 ## getting account balance 
@@ -318,7 +319,7 @@ while crntmsg != prevmsg:
         prevhour = crnthour
         crntmin = timeInNewYork.minute
         prevmin = crntmin
-        msg = retrieve_messages(token)
+        msg = retrieve_messages(token,api_url)
         crntmsg = msg
         prevmsg = crntmsg
         print(crntmsg)
@@ -411,7 +412,7 @@ while True:#datetime.datetime.now() < exitTime:
             
 
     try: # running the whole code in try except loop to check for errors
-        msg = retrieve_messages(token)
+        msg = retrieve_messages(token,api_url)
         crntmsg = msg
         
         # trying the print of all open positions 
@@ -469,7 +470,7 @@ while True:#datetime.datetime.now() < exitTime:
                             }
                     json_data = json.dumps(data)
     
-                    postClientSummTable(json_data)
+                    postClientSummTable(json_data,post_url)
                     
                     
                 elif 'Exit Long' in crntmsg:
@@ -506,7 +507,7 @@ while True:#datetime.datetime.now() < exitTime:
                             }
                     json_data = json.dumps(data)
     
-                    postClientSummTable(json_data)
+                    postClientSummTable(json_data,post_url)
                         
                     qty = None 
                     import math 
@@ -552,7 +553,7 @@ while True:#datetime.datetime.now() < exitTime:
                             }
                     json_data = json.dumps(data)
     
-                    postClientSummTable(json_data)
+                    postClientSummTable(json_data,post_url)
                     
                     account_summary = ib.accountSummary()
                     available_funds = None
@@ -596,7 +597,7 @@ while True:#datetime.datetime.now() < exitTime:
                             }
                     json_data = json.dumps(data)
     
-                    postClientSummTable(json_data)
+                    postClientSummTable(json_data,post_url)
                     
                     account_summary = ib.accountSummary()
                     available_funds = None
@@ -646,7 +647,7 @@ while True:#datetime.datetime.now() < exitTime:
                             }
                     json_data = json.dumps(data)
     
-                    postClientSummTable(json_data)
+                    postClientSummTable(json_data,post_url)
                     
                     account_summary = ib.accountSummary()
                     available_funds = None
