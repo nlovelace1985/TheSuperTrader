@@ -225,9 +225,9 @@ qtyOverride = 1
 qty = None 
 import math 
 if contractName == "MES":
-    qty = math.floor(available_funds/3000)
+    qty = math.floor(available_funds/2000)
 elif contractName == "ES":
-    qty = math.floor(available_funds/30000)
+    qty = math.floor(available_funds/20000)
     
 if qty > 200 and qtyOverride == 1:
     qty = 3
@@ -366,9 +366,9 @@ while True:#datetime.datetime.now() < exitTime:
         qty = None 
         import math 
         if contractName == "MES":
-            qty = math.floor(available_funds/3000)
+            qty = math.floor(available_funds/2000)
         elif contractName == "ES":
-            qty = math.floor(available_funds/30000)
+            qty = math.floor(available_funds/20000)
             
         if qty > 200 and qtyOverride == 1:
             qty = 3
@@ -512,9 +512,9 @@ while True:#datetime.datetime.now() < exitTime:
                     qty = None 
                     import math 
                     if contractName == "MES":
-                        qty = math.floor(available_funds/3000)
+                        qty = math.floor(available_funds/2000)
                     elif contractName == "ES":
-                        qty = math.floor(available_funds/30000)
+                        qty = math.floor(available_funds/20000)
                         
                     if qty > 200 and qtyOverride == 1:
                         qty = 3
@@ -566,9 +566,9 @@ while True:#datetime.datetime.now() < exitTime:
                     qty = None 
                     import math 
                     if contractName == "MES":
-                        qty = math.floor(available_funds/3000)
+                        qty = math.floor(available_funds/2000)
                     elif contractName == "ES":
-                        qty = math.floor(available_funds/30000)
+                        qty = math.floor(available_funds/20000)
                         
                     if qty > 200 and qtyOverride == 1:
                         qty = 3
@@ -610,9 +610,9 @@ while True:#datetime.datetime.now() < exitTime:
                     qty = None 
                     import math 
                     if contractName == "MES":
-                        qty = math.floor(available_funds/3000)
+                        qty = math.floor(available_funds/2000)
                     elif contractName == "ES":
-                        qty = math.floor(available_funds/30000)
+                        qty = math.floor(available_funds/20000)
                         
                     if qty > 200 and qtyOverride == 1:
                         qty = 3
@@ -660,9 +660,9 @@ while True:#datetime.datetime.now() < exitTime:
                     qty = None 
                     import math 
                     if contractName == "MES":
-                        qty = math.floor(available_funds/3000)
+                        qty = math.floor(available_funds/2000)
                     elif contractName == "ES":
-                        qty = math.floor(available_funds/30000)
+                        qty = math.floor(available_funds/20000)
                         
                     if qty > 200 and qtyOverride == 1:
                         qty = 3
