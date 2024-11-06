@@ -1,0 +1,173 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jul  7 12:18:30 2024
+adding text at 12:43 EST
+@author: prave
+"""
+
+from ib_insync import *
+import nest_asyncio
+import datetime
+import pandas as pd
+from discord import SyncWebhook
+import requests
+from datetime import timedelta
+import json, time
+nest_asyncio.apply()
+
+## reading text file 
+cred_file = pd.read_csv('next_gen_v2_cred_aws.txt', header=None)
+custId = cred_file.iloc[0][0].split('=')[1].strip()
+api_url = cred_file.iloc[1][0].split('=')[1].strip()
+authCode = cred_file.iloc[2][0].split('=')[1].strip()
+portNum = cred_file.iloc[3][0].split('=')[1].strip()
+contractName = cred_file.iloc[5][0].split('=')[1].strip()
+post_url = cred_file.iloc[6][0].split('=')[1].strip()
+
+# TTB channel
+token = authCode
+
+headers2 = {
+    'Authorization': token
+}
+
+def extract_datetime(text):
+    pattern = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z'
+    matches = re.findall(pattern, text)
+    return matches
+
+def retrieve_messages(token, api_url):
+    API_URL = api_url
+    headers2 = {
+        'Authorization': token
+    }
+
+    response = requests.get(API_URL, headers=headers2)
+    
+    # Debugging lines to capture the response
+    print(f"GET request to {API_URL} returned status code: {response.status_code}")
+    print(f"Response content: {response.content}")
+
+    if response.status_code == 200:
+        list1 = []
+        for x in response.json():
+            if "Time:" in x['Message']:
+                list1.append(x['Message'])
+                
+        df = pd.DataFrame(list1)
+        df['time'] = df[0].apply(lambda x: x.split("//")[0].split("Time:")[1].strip())
+        df['message'] = df[0].apply(lambda x: x.split("//")[1])
+        
+        df = df.sort_values(by='time', ascending=False)
+        last_message = df[0].iloc[0]
+        
+        return last_message
+    else:
+        print('Failed to fetch data. Status code:', response.status_code)
+
+    return df
+
+# Connect to IB TWS or Gateway
+clientId = 1
+def connect_with_retry(host, port, max_retries, clientId):
+    connected = False
+    ib = IB()
+
+    while not connected and clientId <= max_retries:
+        try:
+            print(f'Trying to connect with clientId = {clientId}')
+            ib.connect(host, port, clientId=clientId)
+            time.sleep(2)
+            ib.accountSummary()
+            connected = True
+            
+            account_summary = ib.accountSummary()
+            available_funds = None
+            TotalCashValue = None
+            for item in account_summary:
+                if item.tag == 'ExcessLiquidity':
+                    available_funds = item.value
+                    
+                if item.tag == 'TotalCashValue':
+                    TotalCashValue  = item.value 
+                    
+            print(f'Successfully connected with clientId = {clientId}, available funds = {available_funds}, total cash value = {TotalCashValue}')
+        except Exception as e:
+            print(type(e))
+            e1 = e
+            print(f'Connection failed with clientId = {clientId}. Retrying...')
+            if "name 'host' is not defined" in str(e1):
+                break
+            clientId += 1
+            time.sleep(1)
+
+    if not connected:
+        raise ConnectionError(f'Unable to connect to IB TWS/Gateway after {max_retries} attempts.')
+
+    return ib, clientId, TotalCashValue
+
+ib, clientId, TotalCashValue = connect_with_retry('127.0.0.1', portNum, 10, clientId)
+
+keyname = custId
+
+def postClientSummTable(json_data, post_url):
+    headers_json = {
+        "Content-Type": "application/json"
+    }
+    
+    api_url_client = post_url
+    response = requests.post(api_url_client, data=json_data, headers=headers_json)
+    
+    # Debugging lines to capture the response
+    print(f"POST request to {api_url_client} returned status code: {response.status_code}")
+    print(f"Response content: {response.content}")
+
+    while response.status_code != 200:
+        print(response.status_code)
+        time.sleep(2)
+
+pos_df = pd.DataFrame(ib.reqPositions())
+
+def tradeStatusCheck(pos_df):
+    tradestatus = ""
+    if len(pos_df) > 0:
+        positions = pos_df[pos_df['position'] != 0]
+        print('positions is ')
+        print(positions)
+        for pos in range(0, len(positions)):
+            position = positions.iloc[pos]
+            if position.contract.symbol == contractName:
+                if position.position > 0:
+                    tradestatus = "Long"
+                elif position.position < 0:
+                    tradestatus = "Short"
+        if len(positions) == 0:
+            tradestatus = "NoPosition"
+    else:
+        tradestatus = "NoPosition"
+        
+    print('tradestatus is ', tradestatus)
+    return tradestatus
+
+tradestatus = tradeStatusCheck(pos_df)
+    
+timenow = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+data = {
+    "clientId": keyname,
+    "TradeStatus": tradestatus,
+    "AccountSize": str(TotalCashValue),
+    "TradeTime": timenow
+}
+json_data = json.dumps(data)
+
+postClientSummTable(json_data, post_url)
+
+available_funds = None
+for item in ib.accountSummary():
+    if item.tag == 'ExcessLiquidity':
+        available_funds = item.value
+        break
+    
+available_funds = float(available_funds)
+
+# ... (Rest of your code remains unchanged)
